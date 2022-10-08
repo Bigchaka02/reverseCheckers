@@ -1,0 +1,281 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <stdbool.h>
+
+//create place values
+enum colors{empty=0, white=-1, kwhite=-2, black=1, kblack=2};
+
+//global variables
+int turn = white;
+bool gameOver = false;
+char str[10];
+int yCurr;
+int xCurr;
+int yLoc;
+int xLoc;
+
+int board[8][8]={  {3, 1, 3, 1, 3, 1, 3, 1},
+                   {1, 3, 1, 3, 1, 3, 1, 3},
+                   {3, 1, 3, 1, 3, 1, 3, 1},
+                   {0, 3, 0, 3, 0, 3, 0, 3},
+                   {3, 0, 3, 0, 3, 0, 3, 0},
+                   {-1, 3, -1, 3, -1, 3, -1, 3},
+                   {3, -1, 3, -1, 3, -1, 3, -1},
+                   {-1, 3, -1, 3, -1, 3, -1, 3}
+                };
+
+
+//this function prints the board
+void printBoard(){
+  printf("\n");
+  printf("    0 1 2 3 4 5 6 7\n");
+  printf("   -----------------\n");
+  for (int i=0; i<8; i++){
+    printf("%d | ", i);
+    for (int j=0; j<8; j++){
+      if(board[i][j]==3){
+        printf("_ ");
+      }
+      else if (board[i][j]==1){
+        printf("b ");
+      }
+      else if (board[i][j]==2){
+        printf("B ");
+      }
+      else if (board[i][j]==-1){
+        printf("w ");
+      }
+      else if (board[i][j]==-2){
+        printf("W ");
+      }
+      else{
+        printf("0 ");
+      }
+    }
+    printf("|");
+    printf("\n");
+  }
+  printf("   -----------------\n");
+}
+
+// this function checks to see of either side has any remaining pieces
+void gameOverCheck(){
+   int bc=0;
+   int wc=0;
+   for (int i=0; i<8; i++){
+      for (int j=0; j<8; j++){
+         if (board[i][j]==white || board[i][j]==kwhite){wc++;}
+         if (board[i][j]==black || board[i][j]==kblack){bc++;}
+      }
+   }
+   if(bc==0||wc==0){
+      gameOver=true;
+   }
+}
+
+void switchTurn(){
+  turn*=-1;
+}
+
+bool pawnCanKill(){
+  for (int i=0; i<8; i++){
+    for (int j=0;j<8; j++){
+      if (board[i][j]==turn){
+        if(board[i+turn][j+1]==(turn*-1) && board[i+turn*2][j+2]==empty){
+          return true;
+        }
+        if(board[i+turn][j-1]==(turn*-1) && board[i+turn*2][j-2]==empty){
+          return true;
+        }
+      }
+
+    }
+  }
+  return false;
+}
+
+bool kingCanKill(){
+  for (int i=0; i<8; i++){
+    for (int j=0;j<8; j++){
+      if (board[i][j]==kblack || board[i][j]==kwhite){
+        if(board[i+1][j+1]==(turn*-1) && board[i+2][j+2]==empty){
+          return true;
+        }
+        if(board[i+1][j-1]==(turn*-1) && board[i+2][j-2]==empty){
+          return true;
+        }
+
+        if(board[i-1][j+1]==(turn*-1) && board[i-2][j+2]==empty){
+          return true;
+        }
+        if(board[i-1][j-1]==(turn*-1) && board[i-2][j-2]==empty){
+          return true;
+        }
+      }
+
+    }
+  }
+  return false;
+}
+
+//bool willKill(){
+//  if (board[yCurr][xCurr])
+//}
+bool pawnToKing(){
+  for(int i=0; i<8; i++){
+    if (board[0][i]==white){
+      board[0][i]=kwhite;
+    }
+    if (board[7][i]==black){
+      board[7][i]=kblack;
+    }
+  }
+}
+//checks to see if player can jump
+bool canJump(){
+  if (turn == black){
+    if (board[yCurr+1][xCurr+1]==white && board[yCurr+2][xCurr+2]==empty){
+      return true;
+    }
+    if (board[yCurr+1][xCurr-1]==white && board[yCurr+2][xCurr-2]==empty){
+      return true;
+    }
+  }
+  else{
+    if (board[yCurr-1][xCurr+1]==black && board[yCurr-2][xCurr+2]==empty){
+      return true;
+    }
+    if (board[yCurr-1][xCurr-1]==black && board[yCurr-2][xCurr-2]==empty){
+      return true;
+    }
+  }
+  return false;
+}
+
+bool justKilled=false;
+//check to see if player actually intends to jump, and if so, kills the opponents piece
+bool willJump(){
+  //if (turn == black){
+    if (yLoc==yCurr+2 && xLoc==xCurr+2){
+      board[yCurr+1][xCurr+1] = empty;
+      return true;
+    }
+    if (yLoc==yCurr+2 && xLoc==xCurr-2){
+      board[yCurr+1][xCurr-1] = empty;
+      return true;
+    }
+    
+  //}
+  //else{
+    if (yLoc==yCurr-2 && xLoc==xCurr+2){
+      board[yCurr-1][xCurr+1] = empty;
+      return true;
+    }
+    if (yLoc==yCurr-2 && xLoc==xCurr-2){
+      board[yCurr-1][xCurr-1] = empty;
+      return true;
+    }
+  //}
+  return false;
+}
+
+bool validcoord(){
+  if (xLoc>7||xLoc<0||yLoc>7||yLoc<0||xCurr>7||xCurr<0||yCurr>7||yCurr<0){
+    return false;
+  }
+  return true;
+}
+bool validMove(){
+  //printf("board at %d,%d is %d\n", xCurr, yCurr, board[yCurr][xCurr]);
+  if (!validcoord()){
+    printf("Out of Range!");
+    return false;
+  }
+  //if its not your turn
+  if (board[yCurr][xCurr]!=turn && board[yCurr][xCurr]!=turn*2){
+    //printf("%d",yCurr);
+    //printf("%d",xCurr);
+    //printf("%d",board[yCurr][xCurr]);
+    //printf("%d",turn);
+    printf("Wrong color!");
+    return false;
+  }
+  
+  if (board[yLoc][xLoc]==empty && board[yCurr][xCurr]!=empty){
+    
+    //if you can kill, you must make the jump
+    if (pawnCanKill() || kingCanKill()){
+      if (willJump()){
+        justKilled=true;
+        return true;
+      }
+      else{
+        printf("Invalid move, you must jump over and kill the opponents piece.\n");
+        return false;
+      }
+    }
+    //if pawn
+    if (board[yCurr][xCurr]==1 || board[yCurr][xCurr]==-1){
+      //if diagonal ahead one
+      if (yLoc==yCurr+turn && (xLoc == xCurr+1 || xLoc == xCurr - 1)){
+        return true;
+      }
+    }
+    //else if king
+    else{
+      if ((yLoc==yCurr+1 || yLoc==yCurr-1) && (xLoc == xCurr+1 || xLoc == xCurr - 1)){
+        return true;
+      }
+    }
+  }
+  else {
+    printf("Space not empty!");
+    return false;
+  }  
+}
+
+int main(){
+   
+   printf("Welcome to Checkers.\n0 is empty, 1 is white, and 2 is black.\nWHITE STARTS.\n");
+
+   printBoard();
+
+   //game loop
+   while (!gameOver){
+    printf("\nPlease first enter coordinates of the piece you wish to move, then the coordinates of the desired location.\nThe xy coordinates start from the top left, please input like this: 1,2-0,3\n");
+      
+    //  THIS IS WHERE WE CHECK VALID/(REQUIRED) MOVES (DOUBLE JUMPS)
+    //------------------------------------------------------------------
+    while (true){
+      scanf("%s",str);
+      xCurr = atoi(&str[0]);
+      yCurr = atoi(&str[2]);
+      xLoc = atoi(&str[4]);
+      yLoc = atoi(&str[6]);
+      if(validMove()){
+        break;
+      }
+      else{
+        printf("Move not valid\n");
+      }
+    }
+    //------------------------------------------------------------------
+      
+    board[yCurr][xCurr]=empty;
+    board[yLoc][xLoc]=turn;
+    pawnToKing();
+    printBoard();  
+    gameOverCheck();
+    if ((pawnCanKill() || kingCanKill()) && justKilled ){
+      printf("SAME PLAYER PLAYS AGAIN, ANOTHER POSSIBLE JUMP DETECTED.");
+    }
+    else{
+      switchTurn();
+      justKilled=false;
+    }
+  }
+
+  return 0;
+}
